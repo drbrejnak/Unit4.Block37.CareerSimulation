@@ -108,7 +108,7 @@ const fetchUsers = async()=> {
   return response.rows;
 };
 
-const fetchItems = async()=> {
+const fetchAllItems = async()=> {
   const SQL = `
     SELECT * FROM items;
   `;
@@ -116,11 +116,19 @@ const fetchItems = async()=> {
   return response.rows;
 };
 
-const fetchReviews = async(user_id)=> {
+const fetchItem = async(item_id)=> {
   const SQL = `
-    SELECT * FROM reviews where user_id = $1
+    SELECT * FROM items where item_id = $1;
   `;
-  const response = await client.query(SQL, [user_id]);
+  const response = await client.query(SQL, [item_id]);
+  return response.rows;
+};
+
+const fetchReviews = async(item_id)=> {
+  const SQL = `
+    SELECT * FROM reviews where item_id = $1
+  `;
+  const response = await client.query(SQL, [item_id]);
   return response.rows;
 };
 
@@ -128,12 +136,13 @@ module.exports = {
     client,
     createTables,
     createUser,
-    createProduct,
+    createItem,
     fetchUsers,
-    fetchProducts,
-    fetchFavorites,
-    createFavorite,
-    destroyFavorite,
+    fetchAllItems,
+    fetchItem,
+    fetchReviews,
+    createReview,
+    destroyReview,
     authenticate,
     findUserWithToken
   };
