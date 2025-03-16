@@ -7,9 +7,10 @@ const JWT = process.env.JWT || 'shhh';
 
 const createTables = async () => {
     const SQL = `
-        DROP TABLE IF EXISTS users;
-        DROP TABLE IF EXISTS items;
-        DROP TABLE IF EXISTS reviews;
+        DROP TABLE IF EXISTS users CASCADE;
+        DROP TABLE IF EXISTS items CASCADE;
+        DROP TABLE IF EXISTS reviews CASCADE;
+        DROP TABLE IF EXISTS comments CASCADE;
         CREATE TABLE users(
             id UUID PRIMARY KEY,
             username VARCHAR(20) UNIQUE NOT NULL,
@@ -17,22 +18,29 @@ const createTables = async () => {
         );
         CREATE TABLE items(
             id UUID PRIMARY KEY,
-            name VARCHAR(255) UNIQUE NOT NULL
-            desc VARCHAR(255) NOT NULL,
+            name VARCHAR(255) UNIQUE NOT NULL,
+            description VARCHAR(255) NOT NULL
         );
         CREATE TABLE reviews(
             id UUID PRIMARY KEY,
             user_id UUID REFERENCES users(id) NOT NULL,
             item_id UUID REFERENCES items(id) NOT NULL,
-            CONSTRAINT unique_user_id_and_item_id UNIQUE (user_id, item_id)
-            rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 and 5),
+            CONSTRAINT unique_user_id_and_item_id UNIQUE (user_id, item_id),
+            rating SMALLINT NOT NULL CHECK (rating BETWEEN 0 and 6),
             review VARCHAR(255) NOT NULL
+        );
+        CREATE TABLE comments(
+            id UUID PRIMARY KEY,
+            user_id UUID REFERENCES users(id) NOT NULL,
+            item_id UUID REFERENCES items(id) NOT NULL,
+            review_id UUID REFERENCES reviews(id) NOT NULL,
+            comment VARCHAR(255) NOT NULL
         );
     `;
     await client.query(SQL);
 }
 
-const createUser = async({ username, password})=> {
+const createUser = async({ username, password })=> {
   const SQL = `
     INSERT INTO users(id, username, password) VALUES($1, $2, $3) RETURNING *
   `;
@@ -40,11 +48,11 @@ const createUser = async({ username, password})=> {
   return response.rows[0];
 };
 
-const createItem = async({ name, desc })=> {
+const createItem = async({ name, description })=> {
   const SQL = `
-    INSERT INTO items(id, name, desc) VALUES($1, $2, $3) RETURNING *
+    INSERT INTO items(id, name, description) VALUES($1, $2, $3) RETURNING *
   `;
-  const response = await client.query(SQL, [uuid.v4(), name, desc]);
+  const response = await client.query(SQL, [uuid.v4(), name, description]);
   return response.rows[0];
 };
 
@@ -59,6 +67,29 @@ const createReview = async({ user_id, item_id, rating, review })=> {
 const destroyReview = async({ user_id, id })=> {
   const SQL = `
     DELETE FROM reviews WHERE user_id=$1 AND id=$2
+  `;
+  await client.query(SQL, [user_id, id]);
+};
+
+const fetchUserComments = async(user_id)=> {
+  const SQL = `
+    SELECT * FROM comments where user_id = $1
+  `;
+  const response = await client.query(SQL, [user_id]);
+  return response.rows;
+};
+
+const createComment = async({ user_id, item_id, review_id, comment })=> {
+  const SQL = `
+    INSERT INTO comments(id, user_id, item_id, review_id, comment) VALUES($1, $2, $3, $4, $5) RETURNING *
+  `;
+  const response = await client.query(SQL, [uuid.v4(), user_id, item_id, review_id, comment]);
+  return response.rows[0];
+};
+
+const destroyComment = async({ user_id, id })=> {
+  const SQL = `
+    DELETE FROM comments WHERE user_id=$1 AND id=$2
   `;
   await client.query(SQL, [user_id, id]);
 };
@@ -124,11 +155,27 @@ const fetchItem = async(item_id)=> {
   return response.rows;
 };
 
-const fetchReviews = async(item_id)=> {
+const fetchItemReviews = async(item_id)=> {
   const SQL = `
     SELECT * FROM reviews where item_id = $1
   `;
   const response = await client.query(SQL, [item_id]);
+  return response.rows;
+};
+
+const fetchUserReviews = async(user_id)=> {
+  const SQL = `
+    SELECT * FROM reviews where user_id = $1
+  `;
+  const response = await client.query(SQL, [user_id]);
+  return response.rows;
+};
+
+const fetchReview = async(item_id, review_id)=> {
+  const SQL = `
+    SELECT * FROM reviews WHERE item_id = $1 AND id = $2
+  `;
+  const response = await client.query(SQL, [item_id, review_id]);
   return response.rows;
 };
 
@@ -140,9 +187,14 @@ module.exports = {
     fetchUsers,
     fetchAllItems,
     fetchItem,
-    fetchReviews,
+    fetchItemReviews,
+    fetchUserReviews,
     createReview,
     destroyReview,
+    fetchReview,
+    fetchUserComments,
+    createComment,
+    destroyComment,
     authenticate,
     findUserWithToken
   };
