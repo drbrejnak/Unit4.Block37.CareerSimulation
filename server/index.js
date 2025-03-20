@@ -9,11 +9,13 @@ const {
   fetchItemReviews,
   fetchUserReviews,
   createReview,
+  updateReview,
   destroyReview,
   fetchReview,
   authenticate,
   findUserWithToken,
   destroyComment,
+  updateComment,
   createComment,
   fetchUserComments
 } = require('./db')
@@ -73,7 +75,7 @@ app.get('/api/items', async(req, res, next)=> {
 
 app.get('/api/items/:itemId', async(req, res, next)=> {
   try {
-    res.send(await fetchItem(req.params.id));
+    res.send(await fetchItem(req.params.itemId));
   }
   catch(ex){
     next(ex);
@@ -82,20 +84,15 @@ app.get('/api/items/:itemId', async(req, res, next)=> {
 
 app.get('/api/items/:itemId/reviews', async(req, res, next)=> {
   try {
-    res.send(await fetchItemReviews(req.params.id));
+    res.send(await fetchItemReviews(req.params.itemId));
   }
   catch(ex){
     next(ex);
   }
 });
 
-app.get('/api/items/:itemId/reviews/:reviewId', isLoggedIn, async(req, res, next)=> {
+app.get('/api/items/:itemId/reviews/:reviewId', async(req, res, next)=> {
 try {
-  if(req.params.id !== req.user.id){
-    const error = Error('not authorized');
-    error.status = 401;
-    throw error;
-  }
   res.send(await fetchReview(req.params.itemId, req.params.reviewId));
 }
 catch(ex){
@@ -105,12 +102,12 @@ catch(ex){
 
 app.post('/api/items/:itemId/reviews/', isLoggedIn, async(req, res, next)=> {
 try {
-  if(req.params.id !== req.item.id){
-    const error = Error('item not found');
+  if(req.user.id !== req.body.user_id){
+    const error = Error('not authorized');
     error.status = 401;
     throw error;
   }
-  res.status(201).send(await createReview({user_id: req.body.user_id, item_id: req.params.id, rating: req.body.rating, review: req.body.review}));
+  res.status(201).send(await createReview({user_id: req.body.user_id, item_id: req.params.itemId, rating: req.body.rating, review: req.body.review}));
 }
 catch(ex){
   next(ex);
@@ -126,10 +123,24 @@ catch(ex){
 }
 });
 
-app.post('/api/items/:itemId/reviews/reviewId/comments', isLoggedIn, async(req, res, next)=> {
+app.put('/api/users/:userId/reviews/:reviewId', isLoggedIn, async(req, res, next)=> {
+  try {
+    if(req.user.id !== req.params.userId){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.status(201).send(await updateReview({id: req.params.reviewId, user_id: req.params.userId, rating: req.body.rating, review: req.body.review}));
+  }
+  catch(ex){
+    next(ex);
+  }
+  });
+
+app.post('/api/items/:itemId/reviews/:reviewId/comments', isLoggedIn, async(req, res, next)=> {
 try {
-  if(req.params.id !== req.item.id){
-    const error = Error('item not found');
+  if(req.user.id !== req.body.user_id){
+    const error = Error('not authorized');
     error.status = 401;
     throw error;
   }
@@ -148,6 +159,20 @@ catch(ex){
   next(ex);
 }
 });
+
+app.put('/api/users/:userId/comments/:commentId', isLoggedIn, async(req, res, next)=> {
+  try {
+    if(req.user.id !== req.params.userId){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.status(201).send(await updateComment({id: req.params.commentId, user_id: req.params.userId, comment: req.body.comment}));
+  }
+  catch(ex){
+    next(ex);
+  }
+  });
 
 app.delete('/api/users/:user_id/reviews/:reviewId', isLoggedIn, async(req, res, next)=> {
 try {
@@ -192,9 +217,10 @@ console.log('connected to database');
 await createTables();
 console.log('tables created');
 
-const [moe, lucy, computer, restaurant] = await Promise.all([
+const [moe, lucy, curly, computer, restaurant] = await Promise.all([
   createUser({ username: 'moe', password: 'm_pw'}),
   createUser({ username: 'lucy', password: 'l_pw'}),
+  createUser({ username: 'curly', password: 'c_pw'}),
   createItem({ name: 'computer', description: "Moe's PC" }),
   createItem({ name: 'restaurant', description: "WcDonald's" }),
 ]);
@@ -204,10 +230,12 @@ console.log(await fetchAllItems());
 
 console.log(await fetchItemReviews(computer.id));
 const favorite = await createReview({user_id: moe.id, item_id: computer.id, rating: 5, review: 'This is my favorite computer.'});
-console.log(favorite);
+await createReview({user_id: curly.id, item_id: computer.id, rating: 5, review: "I sold this computer to Moe after I'd given it some upgrades."});
+console.log(await fetchItemReviews(computer.id));
+
 console.log(await fetchUserComments(lucy.id));
 const comment = await createComment({user_id: lucy.id, item_id: computer.id, review_id: favorite.id, comment: "I've borrowed this computer several times and it's never given me any issue."});
-console.log(comment);
+console.log(await fetchUserComments(lucy.id));
 
 app.listen(port, ()=> console.log(`listening on port ${port}`));
 };

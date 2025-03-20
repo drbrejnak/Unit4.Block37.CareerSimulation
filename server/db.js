@@ -10,7 +10,7 @@ const createTables = async () => {
         DROP TABLE IF EXISTS users CASCADE;
         DROP TABLE IF EXISTS items CASCADE;
         DROP TABLE IF EXISTS reviews CASCADE;
-        DROP TABLE IF EXISTS comments CASCADE;
+        DROP TABLE IF EXISTS comments;
         CREATE TABLE users(
             id UUID PRIMARY KEY,
             username VARCHAR(20) UNIQUE NOT NULL,
@@ -64,6 +64,16 @@ const createReview = async({ user_id, item_id, rating, review })=> {
   return response.rows[0];
 };
 
+const updateReview = async({ id, user_id, rating, review })=> {
+  const SQL = `
+    UPDATE reviews
+    SET rating = $3, review = $4
+    WHERE id = $1 AND user_id = $2;
+  `;
+  const response = await client.query(SQL, [id, user_id, rating, review]);
+  return response.rows[0];
+};
+
 const destroyReview = async({ user_id, id })=> {
   const SQL = `
     DELETE FROM reviews WHERE user_id=$1 AND id=$2
@@ -73,7 +83,7 @@ const destroyReview = async({ user_id, id })=> {
 
 const fetchUserComments = async(user_id)=> {
   const SQL = `
-    SELECT * FROM comments where user_id = $1
+    SELECT * FROM comments WHERE user_id = $1
   `;
   const response = await client.query(SQL, [user_id]);
   return response.rows;
@@ -84,6 +94,16 @@ const createComment = async({ user_id, item_id, review_id, comment })=> {
     INSERT INTO comments(id, user_id, item_id, review_id, comment) VALUES($1, $2, $3, $4, $5) RETURNING *
   `;
   const response = await client.query(SQL, [uuid.v4(), user_id, item_id, review_id, comment]);
+  return response.rows[0];
+};
+
+const updateComment = async({ id, user_id, comment })=> {
+  const SQL = `
+    UPDATE comments
+    SET comment = $3
+    WHERE id = $1 AND user_id = $2;
+  `;
+  const response = await client.query(SQL, [id, user_id, comment]);
   return response.rows[0];
 };
 
@@ -149,7 +169,7 @@ const fetchAllItems = async()=> {
 
 const fetchItem = async(item_id)=> {
   const SQL = `
-    SELECT * FROM items where item_id = $1;
+    SELECT * FROM items WHERE id = $1;
   `;
   const response = await client.query(SQL, [item_id]);
   return response.rows;
@@ -157,7 +177,7 @@ const fetchItem = async(item_id)=> {
 
 const fetchItemReviews = async(item_id)=> {
   const SQL = `
-    SELECT * FROM reviews where item_id = $1
+    SELECT * FROM reviews WHERE item_id = $1
   `;
   const response = await client.query(SQL, [item_id]);
   return response.rows;
@@ -165,7 +185,7 @@ const fetchItemReviews = async(item_id)=> {
 
 const fetchUserReviews = async(user_id)=> {
   const SQL = `
-    SELECT * FROM reviews where user_id = $1
+    SELECT * FROM reviews WHERE user_id = $1
   `;
   const response = await client.query(SQL, [user_id]);
   return response.rows;
@@ -190,10 +210,12 @@ module.exports = {
     fetchItemReviews,
     fetchUserReviews,
     createReview,
+    updateReview,
     destroyReview,
     fetchReview,
     fetchUserComments,
     createComment,
+    updateComment,
     destroyComment,
     authenticate,
     findUserWithToken
