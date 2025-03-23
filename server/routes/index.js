@@ -22,10 +22,6 @@ const {
 const express = require('express');
 const router = express.Router();
 
-// const app = express();
-// app.use(express.json());
-// const port = process.env.PORT || 3000;
-
 client.connect();
 
 const path = require('path');
@@ -213,12 +209,5 @@ router.use((err, req, res, next)=> {
     console.log(err);
     res.status(err.status || 500).send({ error: err.message ? err.message : err });
 });
-
-// const init = async () => {
-//     await client.connect();
-//     router.listen(port, ()=> console.log(`listening on port ${port}`));
-// }
-
-// init();
 
 module.exports = router;

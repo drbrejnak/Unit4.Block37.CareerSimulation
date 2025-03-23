@@ -15,7 +15,6 @@ const {
   app.use(express.json());
 
 const init = async()=> {
-    // const port = process.env.PORT || 3000;
     await client.connect();
     console.log('connected to database');
 
@@ -42,8 +41,6 @@ const init = async()=> {
     const comment = await createComment({user_id: lucy.id, item_id: computer.id, review_id: favorite.id, comment: "I've borrowed this computer several times and it's never given me any issue."});
     console.log(await fetchUserComments(lucy.id));
 
-    // app.listen(port, ()=> console.log(`listening on port ${port}`));
-
 };
 
 if (require.main === module) {
@@ -51,5 +48,3 @@ if (require.main === module) {
 }
 
 module.exports = init;
-
-// init();
