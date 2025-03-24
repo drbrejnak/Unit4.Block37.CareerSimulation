@@ -1,9 +1,6 @@
 const {
   client,
-  createTables,
   createUser,
-  createItem,
-  fetchUsers,
   fetchAllItems,
   fetchItem,
   fetchItemReviews,

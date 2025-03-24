@@ -27,7 +27,7 @@ const createTables = async () => {
             user_id UUID REFERENCES users(id) NOT NULL,
             item_id UUID REFERENCES items(id) NOT NULL,
             CONSTRAINT unique_user_id_and_item_id UNIQUE (user_id, item_id),
-            rating SMALLINT NOT NULL CHECK (rating BETWEEN 0 and 6),
+            rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 and 5),
             review VARCHAR(255) NOT NULL
         );
         CREATE TABLE comments(
